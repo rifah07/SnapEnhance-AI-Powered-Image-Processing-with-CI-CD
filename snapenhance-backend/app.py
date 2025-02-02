@@ -5,6 +5,8 @@ import cv2
 import tensorflow as tf
 from PIL import Image
 from flask_cors import CORS
+from tensorflow.keras.models import load_model
+from tensorflow.keras.preprocessing.image import img_to_array, load_img
 from rembg import remove  # Background removal
 
 app = Flask(__name__)
@@ -17,7 +19,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
 #load AI Sketch Model
-model = tf.keras.models.load_model("sketch_model.keras")
+model = load_model('models/sketch_model.keras')
 
 @app.route("/")
 def home():
