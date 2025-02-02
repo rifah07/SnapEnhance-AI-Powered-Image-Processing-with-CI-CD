@@ -36,6 +36,7 @@ def upload_image():
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)
 
+
     processed_path = os.path.join(PROCESSED_FOLDER, file.filename)
 
     # Load image & get original size
@@ -51,33 +52,39 @@ def upload_image():
         sketch_output = model.predict(img_array)[0]
         sketch_output = (sketch_output * 255).astype(np.uint8)
         sketch_output = cv2.resize(sketch_output, original_size)  # Restore original size
+        processed_image= sketch_output
         cv2.imwrite(processed_path, sketch_output)
 
     elif effect == "grayscale":
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         gray = cv2.resize(gray, original_size)  # Restore size
+        processed_image= gray
         cv2.imwrite(processed_path, gray)
 
     elif effect == "invert":
         inverted = cv2.bitwise_not(img)
         inverted = cv2.resize(inverted, original_size)  # Restore size
+        processed_image= inverted
         cv2.imwrite(processed_path, inverted)
 
     elif effect == "blur":
         blurred = cv2.GaussianBlur(img, (15, 15), 0)
         blurred = cv2.resize(blurred, original_size)  # Restore size
+        processed_image= blurred
         cv2.imwrite(processed_path, blurred)
 
     elif effect == "edge-detect":
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         edges = cv2.Canny(gray, 100, 200)
         edges = cv2.resize(edges, original_size)  # Restore size
+        processed_image= edges
         cv2.imwrite(processed_path, edges)
 
     elif effect == "background-remove":
         img_pil = Image.open(file_path)
         img_no_bg = remove(img_pil)
         img_no_bg = img_no_bg.resize(original_size)  # Restore size
+        processed_image= img_no_bg
         img_no_bg.save(processed_path, "PNG")
 
     elif effect == "pencil-sketch":
@@ -86,6 +93,7 @@ def upload_image():
         blur = cv2.GaussianBlur(inv, (21, 21), 0)
         sketch = cv2.divide(gray, 255 - blur, scale=256)
         sketch = cv2.resize(sketch, original_size)  # Restore size
+        processed_image= sketch
         cv2.imwrite(processed_path, sketch)
 
     elif effect == "cartoonify":
@@ -95,18 +103,32 @@ def upload_image():
         color = cv2.bilateralFilter(img, 9, 300, 300)
         cartoon = cv2.bitwise_and(color, color, mask=edges)
         cartoon = cv2.resize(cartoon, original_size)  # Restore size
+        processed_image= cartoon
         cv2.imwrite(processed_path, cartoon)
 
     elif effect == "sharpen":
         kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
         sharpened = cv2.filter2D(img, -1, kernel)
         sharpened = cv2.resize(sharpened, original_size)  # Restore size
+        processed_image= sharpened
         cv2.imwrite(processed_path, sharpened)
 
     else:
         return jsonify({"error": "Invalid effect selected"}), 400
+    
+   
 
-    return jsonify({"processed_image": f"/processed/{file.filename}"}), 200
+    filename, ext = os.path.splitext(file.filename)
+
+    #generate new filename with effect name
+    output_filename = f"{filename}_{effect}{ext}"
+    processed_path = os.path.join(PROCESSED_FOLDER, output_filename)
+
+    # Save processed image with the new filename
+    cv2.imwrite(processed_path, processed_image)  
+
+    return jsonify({"processed_image": f"/processed/{output_filename}"}), 200
+
 
 
 @app.route("/processed/<filename>")
