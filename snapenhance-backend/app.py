@@ -19,7 +19,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
 #load AI Sketch Model
-model = load_model('models/sketch_model.keras')
+#model = load_model('models/sketch_model.keras')
 
 @app.route("/")
 def home():
@@ -44,18 +44,18 @@ def upload_image():
     original_size = (img.shape[1], img.shape[0])  # (width, height)
 
     # ✅ Apply selected effect
-    if effect == "sketch":
-        img_pil = Image.open(file_path).convert("RGB")
-        img_pil = img_pil.resize((256, 256))  # Model input size
-        img_array = np.array(img_pil) / 255.0
-        img_array = np.expand_dims(img_array, axis=0)
-        sketch_output = model.predict(img_array)[0]
-        sketch_output = (sketch_output * 255).astype(np.uint8)
-        sketch_output = cv2.resize(sketch_output, original_size)  # Restore original size
-        processed_image= sketch_output
-        cv2.imwrite(processed_path, sketch_output)
+   # if effect == "sketch":
+      # img_pil = Image.open(file_path).convert("RGB")
+      # img_pil = img_pil.resize((256, 256))  # Model input size
+      # img_array = np.array(img_pil) / 255.0
+      # img_array = np.expand_dims(img_array, axis=0)
+      #  sketch_output = model.predict(img_array)[0]
+      #  sketch_output = (sketch_output * 255).astype(np.uint8)
+      #  sketch_output = cv2.resize(sketch_output, original_size)  # Restore original size
+      #  processed_image= sketch_output
+      #  cv2.imwrite(processed_path, sketch_output)   
 
-    elif effect == "grayscale":
+    if effect == "grayscale":
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         gray = cv2.resize(gray, original_size)  # Restore size
         processed_image= gray
