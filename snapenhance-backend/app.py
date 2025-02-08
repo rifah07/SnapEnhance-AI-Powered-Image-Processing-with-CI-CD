@@ -1,16 +1,28 @@
 from flask import Flask, request, send_from_directory, jsonify
+from pymongo import MongoClient
+import datetime
+from dotenv import load_dotenv
 import os
 import numpy as np
 import cv2
 import tensorflow as tf
 from PIL import Image
 from flask_cors import CORS
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import img_to_array, load_img
+#from tensorflow.keras.models import load_model
+#from tensorflow.keras.preprocessing.image import img_to_array, load_img
 from rembg import remove  # Background removal
+
+# Load environment variables from .env
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)  #enable CORS for frontend access
+
+# Connection MongoDb
+MONGO_URI = os.getenv("MONGO_URI")
+client = MongoClient(MONGO_URI)
+db = client.snapenhance
+collection = db.image_metadata
 
 UPLOAD_FOLDER = "uploads"
 PROCESSED_FOLDER = "processed"
@@ -35,6 +47,15 @@ def upload_image():
 
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)
+    
+    #saving image data in MongoDb
+    def save_image_data(filename):
+        image_data = {
+            "filename": filename,
+            "upload_time": datetime.datetime.now(datetime.timezone.utc),
+            "status": "Uploaded"
+        }
+        db.images.insert_one(image_data)   
 
 
     processed_path = os.path.join(PROCESSED_FOLDER, file.filename)

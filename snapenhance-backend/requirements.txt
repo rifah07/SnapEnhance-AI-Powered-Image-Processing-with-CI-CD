@@ -6,3 +6,4 @@ rembg
 numpy
 tensorflow
 onnxruntime
+pymongo
