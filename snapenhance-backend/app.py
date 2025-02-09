@@ -46,9 +46,10 @@ def upload_image():
     file = request.files["image"]
     effect = request.form.get("effect", "grayscale")  # Default effect
 
+    # Save original image locally
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)
-    
+
     # Save uploaded image metadata in MongoDB
     image_data = {
         "filename": file.filename,
@@ -61,7 +62,7 @@ def upload_image():
 
     # Load image & get original size
     img = cv2.imread(file_path)
-    original_size = (img.shape[1], img.shape[0])
+    original_size = (img.shape[1], img.shape[0])  # (width, height)
 
     # ✅ Apply selected effect
    # if effect == "sketch":
@@ -146,11 +147,11 @@ def upload_image():
     else:
         cv2.imwrite(processed_path, processed_image)
 
-    # Store processed image in MongoDB GridFS
+    # save processed image in MongoDB GridFS
     with open(processed_path, "rb") as img_file:
         image_id = fs.put(img_file, filename=output_filename, effect=effect)
 
-    # Save processed image metadata
+    # update MongoDB with processed image metadata
     processed_image_data = {
         "filename": output_filename,
         "upload_time": datetime.datetime.now(datetime.timezone.utc),
