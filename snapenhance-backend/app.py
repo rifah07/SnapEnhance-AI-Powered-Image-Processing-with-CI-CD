@@ -6,11 +6,11 @@ from dotenv import load_dotenv
 import os
 import numpy as np
 import cv2
-import tensorflow as tf
 from PIL import Image
 from flask_cors import CORS
-from rembg import remove  # Background removal
+from rembg import remove
 import io
+from bson import ObjectId  # Import ObjectId
 
 # Load environment variables
 load_dotenv()
@@ -31,9 +31,6 @@ PROCESSED_FOLDER = "processed"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-#load AI Sketch Model
-#model = load_model('models/sketch_model.keras')
-
 @app.route("/")
 def home():
     return jsonify({"message": "SnapEnhance API with AI & Filters is running!"})
@@ -44,19 +41,18 @@ def upload_image():
         return jsonify({"error": "No image uploaded"}), 400
     
     file = request.files["image"]
-    effect = request.form.get("effect", "grayscale")  # Default effect
+    effect = request.form.get("effect", "grayscale")  
 
     # Save original image locally
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)
 
     # Save uploaded image metadata in MongoDB
-    image_data = {
+    db.image_metadata.insert_one({
         "filename": file.filename,
         "upload_time": datetime.datetime.now(datetime.timezone.utc),
         "status": "Uploaded"
-    }
-    db.image_metadata.insert_one(image_data)
+    })
 
     processed_path = os.path.join(PROCESSED_FOLDER, file.filename)
 
@@ -64,110 +60,77 @@ def upload_image():
     img = cv2.imread(file_path)
     original_size = (img.shape[1], img.shape[0])  # (width, height)
 
-    # ✅ Apply selected effect
-   # if effect == "sketch":
-      # img_pil = Image.open(file_path).convert("RGB")
-      # img_pil = img_pil.resize((256, 256))  # Model input size
-      # img_array = np.array(img_pil) / 255.0
-      # img_array = np.expand_dims(img_array, axis=0)
-      #  sketch_output = model.predict(img_array)[0]
-      #  sketch_output = (sketch_output * 255).astype(np.uint8)
-      #  sketch_output = cv2.resize(sketch_output, original_size)  # Restore original size
-      #  processed_image= sketch_output
-      #  cv2.imwrite(processed_path, sketch_output)   
-
+    # Apply Effect
+    processed_image = None
     if effect == "grayscale":
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        gray = cv2.resize(gray, original_size)  # Restore size
-        processed_image= gray
-        cv2.imwrite(processed_path, gray)
-
+        processed_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     elif effect == "invert":
-        inverted = cv2.bitwise_not(img)
-        inverted = cv2.resize(inverted, original_size)  # Restore size
-        processed_image= inverted
-        cv2.imwrite(processed_path, inverted)
-
+        processed_image = cv2.bitwise_not(img)
     elif effect == "blur":
-        blurred = cv2.GaussianBlur(img, (15, 15), 0)
-        blurred = cv2.resize(blurred, original_size)  # Restore size
-        processed_image= blurred
-        cv2.imwrite(processed_path, blurred)
-
+        processed_image = cv2.GaussianBlur(img, (15, 15), 0)
     elif effect == "edge-detect":
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        edges = cv2.Canny(gray, 100, 200)
-        edges = cv2.resize(edges, original_size)  # Restore size
-        processed_image= edges
-        cv2.imwrite(processed_path, edges)
-
+        processed_image = cv2.Canny(gray, 100, 200)
     elif effect == "background-remove":
         img_pil = Image.open(file_path)
-        img_no_bg = remove(img_pil)
-        img_no_bg = img_no_bg.resize(original_size)  # Restore size
-        processed_image= img_no_bg
-        img_no_bg.save(processed_path, "PNG")
-
+        processed_image = remove(img_pil).resize(original_size)
     elif effect == "pencil-sketch":
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         inv = cv2.bitwise_not(gray)
         blur = cv2.GaussianBlur(inv, (21, 21), 0)
-        sketch = cv2.divide(gray, 255 - blur, scale=256)
-        sketch = cv2.resize(sketch, original_size)  # Restore size
-        processed_image= sketch
-        cv2.imwrite(processed_path, sketch)
-
+        processed_image = cv2.divide(gray, 255 - blur, scale=256)
     elif effect == "cartoonify":
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         blur = cv2.medianBlur(gray, 5)
         edges = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 9)
         color = cv2.bilateralFilter(img, 9, 300, 300)
-        cartoon = cv2.bitwise_and(color, color, mask=edges)
-        cartoon = cv2.resize(cartoon, original_size)  # Restore size
-        processed_image= cartoon
-        cv2.imwrite(processed_path, cartoon)
-
+        processed_image = cv2.bitwise_and(color, color, mask=edges)
     elif effect == "sharpen":
         kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-        sharpened = cv2.filter2D(img, -1, kernel)
-        sharpened = cv2.resize(sharpened, original_size)  # Restore size
-        processed_image= sharpened
-        cv2.imwrite(processed_path, sharpened)
-
+        processed_image = cv2.filter2D(img, -1, kernel)
     else:
         return jsonify({"error": "Invalid effect selected"}), 400
     
-    #save processed image locally
+    # Generate new filename with effect name
     filename, ext = os.path.splitext(file.filename)
     output_filename = f"{filename}_{effect}.png"
     processed_path = os.path.join(PROCESSED_FOLDER, output_filename)
 
+    # Save processed image locally
     if effect == "background-remove":
         processed_image.save(processed_path, "PNG")
     else:
         cv2.imwrite(processed_path, processed_image)
 
-    # save processed image in MongoDB GridFS
-    with open(processed_path, "rb") as img_file:
-        image_id = fs.put(img_file, filename=output_filename, effect=effect)
+    # Convert image to bytes for MongoDB storage
+    image_bytes = io.BytesIO()
+    if effect == "background-remove":
+        processed_image.save(image_bytes, format="PNG")
+    else:
+        _, buffer = cv2.imencode(".png", processed_image)
+        image_bytes.write(buffer)
 
-    # update MongoDB with processed image metadata
-    processed_image_data = {
+    image_bytes.seek(0)  # Move to the start of the file
+
+    # Save processed image in MongoDB GridFS
+    image_id = fs.put(image_bytes, filename=output_filename, metadata={"effect": effect})
+
+    # Update MongoDB with processed image metadata
+    db.image_metadata.insert_one({
         "filename": output_filename,
         "upload_time": datetime.datetime.now(datetime.timezone.utc),
         "status": "Processed",
         "effect": effect,
         "image_id": str(image_id)
-    }
-    db.image_metadata.insert_one(processed_image_data)
+    })
 
     return jsonify({"processed_image": f"/processed/{output_filename}", "image_id": str(image_id)}), 200
 
-# Route to get processed image from MongoDB
+# ✅ Fixed Route to Get Image from MongoDB GridFS
 @app.route("/processed/image/<image_id>")
 def get_processed_image(image_id):
     try:
-        image_file = fs.get(image_id)  # Retrieve image from GridFS
+        image_file = fs.get(ObjectId(image_id))  # Convert string ID to ObjectId
         return Response(image_file.read(), mimetype="image/png")
     except Exception as e:
         return jsonify({"error": f"Image not found: {str(e)}"}), 404
