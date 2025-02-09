@@ -1,5 +1,6 @@
-from flask import Flask, request, send_from_directory, jsonify
+from flask import Flask, request, send_from_directory, jsonify, Response
 from pymongo import MongoClient
+import gridfs
 import datetime
 from dotenv import load_dotenv
 import os
@@ -8,21 +9,21 @@ import cv2
 import tensorflow as tf
 from PIL import Image
 from flask_cors import CORS
-#from tensorflow.keras.models import load_model
-#from tensorflow.keras.preprocessing.image import img_to_array, load_img
 from rembg import remove  # Background removal
+import io
 
-# Load environment variables from .env
+# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)  #enable CORS for frontend access
+CORS(app)
 
-# Connection MongoDb
+# Connect to MongoDB
 MONGO_URI = os.getenv("MONGO_URI")
 client = MongoClient(MONGO_URI)
 db = client.snapenhance
 collection = db.image_metadata
+fs = gridfs.GridFS(db)  # GridFS instance for storing images
 
 UPLOAD_FOLDER = "uploads"
 PROCESSED_FOLDER = "processed"
@@ -43,28 +44,24 @@ def upload_image():
         return jsonify({"error": "No image uploaded"}), 400
     
     file = request.files["image"]
-    effect = request.form.get("effect", "sketch")  # Default effect is "sketch"
+    effect = request.form.get("effect", "grayscale")  # Default effect
 
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)
     
-    def save_image_data(filename):
-        image_data = {
-          "filename": filename,
-          "upload_time": datetime.datetime.now(datetime.timezone.utc),
-          "status": "Uploaded"
-        }
-        db.image_metadata.insert_one(image_data)
-
-    # Call the function after saving the uploaded file
-    save_image_data(file.filename)
-
+    # Save uploaded image metadata in MongoDB
+    image_data = {
+        "filename": file.filename,
+        "upload_time": datetime.datetime.now(datetime.timezone.utc),
+        "status": "Uploaded"
+    }
+    db.image_metadata.insert_one(image_data)
 
     processed_path = os.path.join(PROCESSED_FOLDER, file.filename)
 
     # Load image & get original size
     img = cv2.imread(file_path)
-    original_size = (img.shape[1], img.shape[0])  # (width, height)
+    original_size = (img.shape[1], img.shape[0])
 
     # ✅ Apply selected effect
    # if effect == "sketch":
@@ -139,25 +136,40 @@ def upload_image():
     else:
         return jsonify({"error": "Invalid effect selected"}), 400
     
-   
-
+    #save processed image locally
     filename, ext = os.path.splitext(file.filename)
-
-    #generate new filename with effect name
-    output_filename = f"{filename}_{effect}{ext}"
+    output_filename = f"{filename}_{effect}.png"
     processed_path = os.path.join(PROCESSED_FOLDER, output_filename)
 
-    # Save processed image with the new filename
-    cv2.imwrite(processed_path, processed_image)  
+    if effect == "background-remove":
+        processed_image.save(processed_path, "PNG")
+    else:
+        cv2.imwrite(processed_path, processed_image)
 
-    return jsonify({"processed_image": f"/processed/{output_filename}"}), 200
+    # Store processed image in MongoDB GridFS
+    with open(processed_path, "rb") as img_file:
+        image_id = fs.put(img_file, filename=output_filename, effect=effect)
 
+    # Save processed image metadata
+    processed_image_data = {
+        "filename": output_filename,
+        "upload_time": datetime.datetime.now(datetime.timezone.utc),
+        "status": "Processed",
+        "effect": effect,
+        "image_id": str(image_id)
+    }
+    db.image_metadata.insert_one(processed_image_data)
 
+    return jsonify({"processed_image": f"/processed/{output_filename}", "image_id": str(image_id)}), 200
 
-@app.route("/processed/<filename>")
-def get_processed_image(filename):
-    return send_from_directory(PROCESSED_FOLDER, filename)
+# Route to get processed image from MongoDB
+@app.route("/processed/image/<image_id>")
+def get_processed_image(image_id):
+    try:
+        image_file = fs.get(image_id)  # Retrieve image from GridFS
+        return Response(image_file.read(), mimetype="image/png")
+    except Exception as e:
+        return jsonify({"error": f"Image not found: {str(e)}"}), 404
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
-
