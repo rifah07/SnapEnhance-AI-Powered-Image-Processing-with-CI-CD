@@ -2,4 +2,4 @@
 models
 
 //hide environmental variables
-.env
+*.env
