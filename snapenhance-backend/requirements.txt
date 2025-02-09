@@ -7,3 +7,4 @@ numpy
 tensorflow
 onnxruntime
 pymongo
+python-dotenv
