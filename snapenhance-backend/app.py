@@ -48,14 +48,16 @@ def upload_image():
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)
     
-    #saving image data in MongoDb
     def save_image_data(filename):
         image_data = {
-            "filename": filename,
-            "upload_time": datetime.datetime.now(datetime.timezone.utc),
-            "status": "Uploaded"
+          "filename": filename,
+          "upload_time": datetime.datetime.now(datetime.timezone.utc),
+          "status": "Uploaded"
         }
-        db.images.insert_one(image_data)   
+        db.image_metadata.insert_one(image_data)
+
+    # Call the function after saving the uploaded file
+    save_image_data(file.filename)
 
 
     processed_path = os.path.join(PROCESSED_FOLDER, file.filename)
