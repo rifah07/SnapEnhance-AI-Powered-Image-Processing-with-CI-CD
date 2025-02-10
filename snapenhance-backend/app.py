@@ -1,4 +1,4 @@
-from flask import Flask, request, send_from_directory, jsonify, Response
+from flask import Flask, request, jsonify, Response
 from pymongo import MongoClient
 import gridfs
 import datetime
@@ -12,18 +12,18 @@ from rembg import remove
 import io
 from bson import ObjectId 
 
-#load environment variables
+#soad environment variables
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-#connect to MongoDB
+# Connect to MongoDB
 MONGO_URI = os.getenv("MONGO_URI")
 client = MongoClient(MONGO_URI)
 db = client.snapenhance
 collection = db.image_metadata
-fs = gridfs.GridFS(db)  # GridFS instance for storing images
+fs = gridfs.GridFS(db)  # Rename to fs for clarity
 
 UPLOAD_FOLDER = "uploads"
 PROCESSED_FOLDER = "processed"
@@ -43,7 +43,7 @@ def upload_image():
     file = request.files["image"]
     effect = request.form.get("effect", "grayscale")  
 
-    # Save original image locally
+    #save original image locally
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)
 
@@ -72,7 +72,7 @@ def upload_image():
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         processed_image = cv2.Canny(gray, 100, 200)
     elif effect == "background-remove":
-        img_pil = Image.open(file_path).convert("RGBA")  #ensure RGBA mode
+        img_pil = Image.open(file_path).convert("RGBA")  # Ensure RGBA mode
         processed_image = remove(img_pil).resize(original_size)
     elif effect == "pencil-sketch":
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -91,7 +91,7 @@ def upload_image():
     else:
         return jsonify({"error": "Invalid effect selected"}), 400
     
-    #generate new filename with effect name
+    # Generate new filename with effect name
     filename, ext = os.path.splitext(file.filename)
     output_filename = f"{filename}_{effect}.png"
     processed_path = os.path.join(PROCESSED_FOLDER, output_filename)
@@ -110,12 +110,12 @@ def upload_image():
         _, buffer = cv2.imencode(".png", processed_image)
         image_bytes.write(buffer)
 
-    image_bytes.seek(0)  # Move to the start of the file
+    image_bytes.seek(0)  #move to the start of the file
 
     #save processed image in MongoDB GridFS
-    image_id = fs.put(image_bytes, filename=output_filename, metadata={"effect": effect})
+    image_id = fs.put(image_bytes.getvalue(), filename=output_filename, metadata={"effect": effect})
 
-    # update MongoDB with processed image metadata
+    # Update MongoDB with processed image metadata
     db.image_metadata.insert_one({
         "filename": output_filename,
         "upload_time": datetime.datetime.now(datetime.timezone.utc),
@@ -126,11 +126,11 @@ def upload_image():
 
     return jsonify({"processed_image": f"/processed/{output_filename}", "image_id": str(image_id)}), 200
 
-# fixed Route to Get Image from MongoDB GridFS
+#route to Get Image from MongoDB GridFS
 @app.route("/processed/<image_id>")
 def get_processed_image(image_id):
     try:
-        image_file = fs.get(ObjectId(image_id))  # Convert string ID to ObjectId
+        image_file = fs.get(ObjectId(image_id))  #convert string ID to ObjectId
         return Response(image_file.read(), mimetype="image/png")
     except Exception as e:
         return jsonify({"error": f"Image not found: {str(e)}"}), 404
