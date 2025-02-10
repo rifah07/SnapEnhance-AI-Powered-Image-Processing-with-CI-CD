@@ -9,16 +9,3 @@ services:
       - .:/app
     environment:
       - FLASK_ENV=production
-      - MONGO_URI=${MONGO_URI} #load MongoDB URI from .env
-    depends_on:
-      - mongo #ensure MongoDB starts before Flask
-
-  mongo:
-    image: mongo
-    container_name: mongo_db
-    restart: always
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
