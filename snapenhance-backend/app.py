@@ -10,15 +10,15 @@ from PIL import Image
 from flask_cors import CORS
 from rembg import remove
 import io
-from bson import ObjectId  # Import ObjectId
+from bson import ObjectId 
 
-# Load environment variables
+#load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-# Connect to MongoDB
+#connect to MongoDB
 MONGO_URI = os.getenv("MONGO_URI")
 client = MongoClient(MONGO_URI)
 db = client.snapenhance
@@ -47,7 +47,7 @@ def upload_image():
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)
 
-    # Save uploaded image metadata in MongoDB
+    #save uploaded image metadata in MongoDB
     db.image_metadata.insert_one({
         "filename": file.filename,
         "upload_time": datetime.datetime.now(datetime.timezone.utc),
@@ -56,11 +56,11 @@ def upload_image():
 
     processed_path = os.path.join(PROCESSED_FOLDER, file.filename)
 
-    # Load image & get original size
+    #load image & get original size
     img = cv2.imread(file_path)
     original_size = (img.shape[1], img.shape[0])  # (width, height)
 
-    # Apply Effect
+    #apply Effect
     processed_image = None
     if effect == "grayscale":
         processed_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -72,7 +72,7 @@ def upload_image():
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         processed_image = cv2.Canny(gray, 100, 200)
     elif effect == "background-remove":
-        img_pil = Image.open(file_path)
+        img_pil = Image.open(file_path).convert("RGBA")  #ensure RGBA mode
         processed_image = remove(img_pil).resize(original_size)
     elif effect == "pencil-sketch":
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -91,18 +91,18 @@ def upload_image():
     else:
         return jsonify({"error": "Invalid effect selected"}), 400
     
-    # Generate new filename with effect name
+    #generate new filename with effect name
     filename, ext = os.path.splitext(file.filename)
     output_filename = f"{filename}_{effect}.png"
     processed_path = os.path.join(PROCESSED_FOLDER, output_filename)
 
-    # Save processed image locally
+    #save processed image locally
     if effect == "background-remove":
         processed_image.save(processed_path, "PNG")
     else:
         cv2.imwrite(processed_path, processed_image)
 
-    # Convert image to bytes for MongoDB storage
+    #convert image to bytes for MongoDB storage
     image_bytes = io.BytesIO()
     if effect == "background-remove":
         processed_image.save(image_bytes, format="PNG")
@@ -112,10 +112,10 @@ def upload_image():
 
     image_bytes.seek(0)  # Move to the start of the file
 
-    # Save processed image in MongoDB GridFS
+    #save processed image in MongoDB GridFS
     image_id = fs.put(image_bytes, filename=output_filename, metadata={"effect": effect})
 
-    # Update MongoDB with processed image metadata
+    # update MongoDB with processed image metadata
     db.image_metadata.insert_one({
         "filename": output_filename,
         "upload_time": datetime.datetime.now(datetime.timezone.utc),
@@ -126,8 +126,8 @@ def upload_image():
 
     return jsonify({"processed_image": f"/processed/{output_filename}", "image_id": str(image_id)}), 200
 
-# ✅ Fixed Route to Get Image from MongoDB GridFS
-@app.route("/processed/image/<image_id>")
+# fixed Route to Get Image from MongoDB GridFS
+@app.route("/processed/<image_id>")
 def get_processed_image(image_id):
     try:
         image_file = fs.get(ObjectId(image_id))  # Convert string ID to ObjectId
