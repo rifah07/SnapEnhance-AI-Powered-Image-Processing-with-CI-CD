@@ -1,19 +1,17 @@
 from flask import Flask, request, jsonify, send_from_directory
 import os
-import datetime
 import numpy as np
 import cv2
 from PIL import Image
 from flask_cors import CORS
 from rembg import remove
-import io
 
 app = Flask(__name__)
 CORS(app)
 
+#create folders if they don’t exist
 UPLOAD_FOLDER = "uploads"
 PROCESSED_FOLDER = "processed"
-
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
@@ -32,11 +30,13 @@ def upload_image():
     #save original image locally
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)
+    print(f"Image saved at: {file_path}")  # Debugging print
 
-    processed_path = os.path.join(PROCESSED_FOLDER, file.filename)
-
-    #load image & get original size
+    #load image
     img = cv2.imread(file_path)
+    if img is None:
+        return jsonify({"error": "Failed to read the uploaded image"}), 500
+    
     original_size = (img.shape[1], img.shape[0])  # (width, height)
 
     #apply effect
@@ -70,16 +70,18 @@ def upload_image():
     else:
         return jsonify({"error": "Invalid effect selected"}), 400
     
-    #generate new filename with effect name
+    #generate new filename
     filename, ext = os.path.splitext(file.filename)
     output_filename = f"{filename}_{effect}.png"
     processed_path = os.path.join(PROCESSED_FOLDER, output_filename)
 
-    #save processed image locally
+    #save processed image
     if effect == "background-remove":
         processed_image.save(processed_path, "PNG")
     else:
         cv2.imwrite(processed_path, processed_image)
+
+    print(f"Processed image saved at: {processed_path}")  #debugging print
 
     return jsonify({"processed_image": f"/processed/{output_filename}"}), 200
 
