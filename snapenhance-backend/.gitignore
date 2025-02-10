@@ -1,5 +1,2 @@
-//don't push model
-models
-
 //hide environmental variables
 .env
