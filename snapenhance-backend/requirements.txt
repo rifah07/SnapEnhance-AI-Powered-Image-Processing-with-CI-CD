@@ -1,8 +1,6 @@
-flask
+Flask
 flask-cors
-pymongo
-python-dotenv
 numpy
 opencv-python
-pillow
+Pillow
 rembg

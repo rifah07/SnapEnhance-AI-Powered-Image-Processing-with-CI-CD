@@ -1,29 +1,15 @@
-from flask import Flask, request, jsonify, Response
-from pymongo import MongoClient
-import gridfs
-import datetime
-from dotenv import load_dotenv
+from flask import Flask, request, jsonify, send_from_directory
 import os
+import datetime
 import numpy as np
 import cv2
 from PIL import Image
 from flask_cors import CORS
 from rembg import remove
 import io
-from bson import ObjectId 
-
-#soad environment variables
-load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
-
-# Connect to MongoDB
-MONGO_URI = os.getenv("MONGO_URI")
-client = MongoClient(MONGO_URI)
-db = client.snapenhance
-collection = db.image_metadata
-fs = gridfs.GridFS(db)  # Rename to fs for clarity
 
 UPLOAD_FOLDER = "uploads"
 PROCESSED_FOLDER = "processed"
@@ -33,7 +19,7 @@ os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
 @app.route("/")
 def home():
-    return jsonify({"message": "SnapEnhance API with AI & Filters is running!"})
+    return jsonify({"message": "SnapEnhance API is running!"})
 
 @app.route("/upload", methods=["POST"])
 def upload_image():
@@ -47,20 +33,13 @@ def upload_image():
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)
 
-    #save uploaded image metadata in MongoDB
-    db.image_metadata.insert_one({
-        "filename": file.filename,
-        "upload_time": datetime.datetime.now(datetime.timezone.utc),
-        "status": "Uploaded"
-    })
-
     processed_path = os.path.join(PROCESSED_FOLDER, file.filename)
 
     #load image & get original size
     img = cv2.imread(file_path)
     original_size = (img.shape[1], img.shape[0])  # (width, height)
 
-    #apply Effect
+    #apply effect
     processed_image = None
     if effect == "grayscale":
         processed_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -91,7 +70,7 @@ def upload_image():
     else:
         return jsonify({"error": "Invalid effect selected"}), 400
     
-    # Generate new filename with effect name
+    #generate new filename with effect name
     filename, ext = os.path.splitext(file.filename)
     output_filename = f"{filename}_{effect}.png"
     processed_path = os.path.join(PROCESSED_FOLDER, output_filename)
@@ -102,38 +81,11 @@ def upload_image():
     else:
         cv2.imwrite(processed_path, processed_image)
 
-    #convert image to bytes for MongoDB storage
-    image_bytes = io.BytesIO()
-    if effect == "background-remove":
-        processed_image.save(image_bytes, format="PNG")
-    else:
-        _, buffer = cv2.imencode(".png", processed_image)
-        image_bytes.write(buffer)
+    return jsonify({"processed_image": f"/processed/{output_filename}"}), 200
 
-    image_bytes.seek(0)  #move to the start of the file
-
-    #save processed image in MongoDB GridFS
-    image_id = fs.put(image_bytes.getvalue(), filename=output_filename, metadata={"effect": effect})
-
-    # Update MongoDB with processed image metadata
-    db.image_metadata.insert_one({
-        "filename": output_filename,
-        "upload_time": datetime.datetime.now(datetime.timezone.utc),
-        "status": "Processed",
-        "effect": effect,
-        "image_id": str(image_id)
-    })
-
-    return jsonify({"processed_image": f"/processed/{output_filename}", "image_id": str(image_id)}), 200
-
-#route to Get Image from MongoDB GridFS
-@app.route("/processed/<image_id>")
-def get_processed_image(image_id):
-    try:
-        image_file = fs.get(ObjectId(image_id))  #convert string ID to ObjectId
-        return Response(image_file.read(), mimetype="image/png")
-    except Exception as e:
-        return jsonify({"error": f"Image not found: {str(e)}"}), 404
+@app.route("/processed/<filename>")
+def get_processed_image(filename):
+    return send_from_directory(PROCESSED_FOLDER, filename)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
