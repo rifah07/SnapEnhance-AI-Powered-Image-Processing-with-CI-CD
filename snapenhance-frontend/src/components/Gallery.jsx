@@ -1,21 +1,19 @@
-import React, { useState, useEffect } from "react";
-//import axios from "axios";
+import React, { useState } from "react";
 import flowerBg from "../assets/flower_bg.jpg";
 import "../styles/gallery.css";
 
 const Gallery = () => {
-  const [images, setImages] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [effect, setEffect] = useState("grayscale");
+  const [processedImage, setProcessedImage] = useState(null);
+  const [inputImageURL, setInputImageURL] = useState(null);
 
-  useEffect(() => {
-    fetch("https://snapenhance-backend-production.up.railway.app/processed")
-      .then((res) => res.json())
-      .then((data) => setImages(data))
-      .catch((err) => console.error(err));
-  }, []);
-
-  const handleFileChange = (e) => setSelectedFile(e.target.files[0]);
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setSelectedFile(file);
+    setInputImageURL(URL.createObjectURL(file));
+    setProcessedImage(null); // Clear previous output when new file is selected
+  };
 
   const handleUpload = async () => {
     if (!selectedFile) return alert("Please select an image!");
@@ -33,12 +31,17 @@ const Gallery = () => {
     );
 
     const result = await response.json();
-    if (response.ok) setImages([...images, result.processed_image]);
+    if (response.ok) {
+      setProcessedImage(
+        `https://snapenhance-backend-production.up.railway.app${result.processed_image}`
+      );
+    } else {
+      alert("Failed to process the image!");
+    }
   };
 
   return (
     <div className="gallery" style={{ backgroundImage: `url(${flowerBg})` }}>
-      {/* Upload form */}
       <div className="upload-container">
         <h2>Upload an Image</h2>
         <input type="file" onChange={handleFileChange} />
@@ -54,20 +57,15 @@ const Gallery = () => {
         <button onClick={handleUpload}>Upload & Apply Effect</button>
       </div>
 
-      {/* Gallery Images */}
-      <h1>Gallery</h1>
-      {images.length === 0 ? (
-        <p>No processed images found.</p>
-      ) : (
-        <div className="image-grid">
-          {images.map((img, index) => (
-            <div key={index} className="image-card">
-              <img
-                src={`https://snapenhance-backend-production.up.railway.app${img}`}
-                alt="Processed"
-              />
-            </div>
-          ))}
+      {processedImage && (
+        <div className="image-container">
+          <img src={inputImageURL} alt="Input" className="image" />
+          <div className="arrow">↓</div>
+          <h2 className="effect-name">
+            {effect.replace("-", " ").toUpperCase()}
+          </h2>
+          <div className="arrow">↓</div>
+          <img src={processedImage} alt="Processed" className="image" />
         </div>
       )}
     </div>
