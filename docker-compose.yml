@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  frontend:
+    build: ./snapenhance-frontend
+    ports:
+      - "8080:80" # Change 3000 to 8080
+    depends_on:
+      - backend
+
+  backend:
+    build: ./snapenhance-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
