@@ -1,36 +1,33 @@
-name: Deploy Frontend
+name: Deploy SnapEnhance Frontend to Vercel
 
 on:
   push:
     branches:
-      - master # Runs when you push to the main branch
+      - master
   pull_request:
     branches:
       - master
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
 
-      - name: Log in to Docker Hub
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: Install Dependencies
+        run: npm install
 
-      - name: Build and Push Docker Image
+      - name: Build Project
+        run: npm run build
+
+      - name: Deploy to Vercel
         run: |
-          docker build -t your-dockerhub-username/snapenhance-frontend .
-          docker push your-dockerhub-username/snapenhance-frontend
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to Railway
-        run: |
-          curl -X POST "https://api.railway.app/v1/services/YOUR_SERVICE_ID/deploy" \
-          -H "Authorization: Bearer ${{ secrets.RAILWAY_API_TOKEN }}"
+          npm install -g vercel
+          vercel --token ${{ secrets.VERCEL_TOKEN }} --prod
