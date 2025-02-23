@@ -27,13 +27,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Tests (Optional)
+      - name: Run Tests
         run: |
           cd snapenhance-backend
           pytest || echo "Tests failed, continuing deployment..."
 
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Authenticate Railway
+        run: echo ${{ secrets.RAILWAY_TOKEN }} | railway login --token
+
       - name: Deploy to Railway
         run: |
-          npm install -g @railway/cli
           cd snapenhance-backend
-          railway up --service <snapenhance-backend> --token ${{ secrets.RAILWAY_TOKEN }}
+          railway up --service ${{ secrets.RAILWAY_SERVICE_ID }}
