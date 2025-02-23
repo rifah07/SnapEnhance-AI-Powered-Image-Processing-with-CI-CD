@@ -34,6 +34,6 @@ jobs:
 
       - name: Deploy to Railway
         run: |
-          npm install -g railway
+          npm install -g @railway/cli
           cd snapenhance-backend
           railway up --service=snapenhance-backend --token=${{ secrets.RAILWAY_TOKEN }}
