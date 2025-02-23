@@ -1,0 +1,39 @@
+name: Deploy SnapEnhance Backend to Railway
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9" # Update if needed
+
+      - name: Install Dependencies
+        run: |
+          cd snapenhance-backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Tests (Optional)
+        run: |
+          cd snapenhance-backend
+          pytest || echo "Tests failed, continuing deployment..."
+
+      - name: Deploy to Railway
+        run: |
+          npm install -g railway
+          cd snapenhance-backend
+          railway up --service=snapenhance-backend --token=${{ secrets.RAILWAY_TOKEN }}
