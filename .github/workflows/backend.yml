@@ -36,5 +36,5 @@ jobs:
         run: |
           npm install -g @railway/cli
           cd snapenhance-backend
-          railway login --auth ${{ secrets.RAILWAY_TOKEN }}
+          echo $RAILWAY_TOKEN | railway login
           railway up
