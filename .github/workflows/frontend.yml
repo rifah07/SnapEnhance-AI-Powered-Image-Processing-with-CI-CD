@@ -22,12 +22,17 @@ jobs:
           node-version: 18
 
       - name: Install Dependencies
-        run: npm install
+        run: |
+          cd snapenhance-frontend
+          npm install
 
       - name: Build Project
-        run: npm run build
+        run: |
+          cd snapenhance-frontend
+          npm run build
 
       - name: Deploy to Vercel
         run: |
           npm install -g vercel
+          cd snapenhance-frontend
           vercel --prod --yes --token ${{ secrets.VERCEL_TOKEN }}
