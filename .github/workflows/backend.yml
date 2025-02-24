@@ -19,7 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.9" # Update if needed
+          python-version: "3.9"
 
       - name: Install Dependencies
         run: |
@@ -35,11 +35,7 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
-      - name: Authenticate Railway
-        run: |
-          echo "${{ secrets.RAILWAY_TOKEN }}" | railway login
-
       - name: Deploy to Railway
         run: |
           cd snapenhance-backend
-          railway up --service ${{ secrets.RAILWAY_SERVICE_ID }}
+          railway up --service=snapenhance-backend --token="${{ secrets.RAILWAY_TOKEN }}"
