@@ -40,4 +40,4 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           cd snapenhance-backend
-          railway up --service snapenhance-backend
+          railway up --service snapenhance-backend --ci
