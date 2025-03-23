@@ -1,10 +1,7 @@
-name: Deploy SnapEnhance Backend to Railway
+name: Deploy Backend to Render
 
 on:
   push:
-    branches:
-      - master
-  pull_request:
     branches:
       - master
 
@@ -13,31 +10,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
+    - name: Install Render CLI
+      run: curl -fsSL https://cli.render.com/install | bash
 
-      - name: Install Dependencies
-        run: |
-          cd snapenhance-backend
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+    - name: Login to Render
+      run: |
+        render login --api-key ${{ secrets.RENDER_API_KEY }}
 
-      - name: Run Tests
-        run: |
-          cd snapenhance-backend
-          pytest || echo "Tests failed, continuing deployment..."
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy to Railway
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: |
-          cd snapenhance-backend
-          railway up --service snapenhance-backend --ci
+    - name: Deploy to Render
+      run: |
+        render services update snapenhance-backend \
+        --service-id <your-service-id> \
+        --path snapenhance-backend

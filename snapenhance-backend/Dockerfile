@@ -1,20 +1,20 @@
-#using official Python image
+# Using official Python image
 FROM python:3.9
 
-#set up the working directory
+# Set up the working directory
 WORKDIR /app
 
-#install system dependencies
+# Install system dependencies
 RUN apt-get update && apt-get install -y libgl1-mesa-glx
 
-# copy the files
+# Copy the files
 COPY . .
 
-#install Python dependencies
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-#expose port
+# Expose port
 EXPOSE 5000
 
-#run Flask app
+# Run Flask app
 CMD ["python", "app.py"]
