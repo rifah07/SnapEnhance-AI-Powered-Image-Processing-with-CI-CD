@@ -22,4 +22,4 @@ jobs:
 
     - name: Deploy to Render
       run: |
-        render deploy --service snapenhance-backend
+        render deploy --service "SnapEnhance-AI-Powered-Image-Processing-with-CI-CD"
