@@ -23,7 +23,7 @@ const Gallery = () => {
     formData.append("effect", effect);
 
     const response = await fetch(
-      "https://snapenhance-backend-production.up.railway.app/upload", //Backend API
+      "https://snapenhance-ai-powered-image-processing.onrender.com/upload", //Backend API
       {
         method: "POST",
         body: formData,
