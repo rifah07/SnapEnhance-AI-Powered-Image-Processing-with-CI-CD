@@ -33,7 +33,7 @@ const Gallery = () => {
     const result = await response.json();
     if (response.ok) {
       setProcessedImage(
-        `https://snapenhance-backend-production.up.railway.app${result.processed_image}`
+        `https://snapenhance-ai-powered-image-processing.onrender.com${result.processed_image}`
       );
     } else {
       alert("Failed to process the image!");
