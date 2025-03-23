@@ -12,7 +12,7 @@ const Gallery = () => {
     const file = e.target.files[0];
     setSelectedFile(file);
     setInputImageURL(URL.createObjectURL(file));
-    setProcessedImage(null); // Clear previous output when new file is selected
+    setProcessedImage(null);
   };
 
   const handleUpload = async () => {
