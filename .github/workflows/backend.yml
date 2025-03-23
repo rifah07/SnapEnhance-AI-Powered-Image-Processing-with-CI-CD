@@ -14,14 +14,12 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Install Render CLI
-      run: curl -fsSL https://cli.render.com/install | bash
+      run: curl -fsSL https://cli.render.com/install.sh | bash
 
     - name: Login to Render
       run: |
-        render login --api-key ${{ secrets.RENDER_API_KEY}}
+        render login --api-key ${{ secrets.RENDER_API_KEY }}
 
     - name: Deploy to Render
       run: |
-        render services update snapenhance-backend \
-        --service-id <your-service-id> \
-        --path snapenhance-backend
+        render deploy --service snapenhance-backend
