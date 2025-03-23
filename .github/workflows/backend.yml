@@ -14,12 +14,16 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Install Render CLI
-      run: curl -fsSL https://cli.render.com/install.sh | bash
+      run: |
+        curl -s https://cli.render.com/install.sh > install-render.sh
+        chmod +x install-render.sh
+        ./install-render.sh
+        echo "$HOME/.render/bin" >> $GITHUB_PATH
 
     - name: Login to Render
       run: |
-        render login --api-key ${{ secrets.RENDER_API_KEY }}
+        ~/.render/bin/render login --api-key ${{ secrets.RENDER_API_KEY }}
 
     - name: Deploy to Render
       run: |
-        render deploy --service "SnapEnhance-AI-Powered-Image-Processing-with-CI-CD"
+        ~/.render/bin/render deploy --service "SnapEnhance-AI-Powered-Image-Processing-with-CI-CD"
