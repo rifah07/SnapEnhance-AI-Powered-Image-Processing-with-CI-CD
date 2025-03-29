@@ -34,8 +34,9 @@ def upload_image():
     if img is None:
         return jsonify({"error": "Failed to read the uploaded image"}), 500
     
-    original_size = (img.shape[1], img.shape[0])  # (width, height)
+    original_size = (img.shape[1], img.shape[0])  #(width and height)
 
+    #All the Effects are applied here
     processed_image = None
     if effect == "grayscale":
         processed_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
