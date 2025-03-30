@@ -24,7 +24,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd snapenhance-frontend    # npm install
+          cd snapenhance-frontend
           npm ci --prefer-offline  
 
      
