@@ -20,15 +20,18 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
+          cache: 'npm' 
 
       - name: Install Dependencies
         run: |
-          cd snapenhance-frontend
-          npm install
+          cd snapenhance-frontend    # npm install
+          npm ci --prefer-offline  
 
-      - name: Build Project
+     
+      - name: Run Tests
+        working-directory: ./snapenhance-frontend
         run: |
-          cd snapenhance-frontend
+          npm run test -- --watchAll=false
           npm run build
 
       - name: Deploy to Vercel
